@@ -13,7 +13,7 @@ Symbols = ['{', '}', '(', ')', '[', ']', '.', ',', ';', '+',
            '-', '*', '/', '&', '|', '<', '>', '=', '~']
 
 
-class JackTokenizer(object):
+class Tokenizer(object):
 
     def __init__(self, filePath):
         """
@@ -51,7 +51,7 @@ class JackTokenizer(object):
         """
         return self.current_token_type
 
-    def keyWord(self):
+    def keyword(self):
         """
         Returns the keyword which is the current token. Should be
         called only when tokenType() is KEYWORD.
