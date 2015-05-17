@@ -1,4 +1,5 @@
 from JackTokenizer import TokenType, Tokenizer
+import sys
 
 
 class Keyword:
@@ -410,10 +411,18 @@ class CompilationEngine:
         self.outputFile.write(("  " * self.indentLevel) + text + '\n')
         # print ("  " * self.indentLevel) + text
 
-if __name__ == '__main__':
+
+def main(args):
+    if len(args) != 2:
+        print "Usage: (python) CompilationEngine.py <inputPath> <outputPath>"
+        return
+
+    inputPath = args[0]
+    outputPath = args[1]
+
     #inputPath = r"ArrayTest\Main.jack"; outputPath = r"ArrayTest\_Main.xml";
     #inputPath = r"Square\Main.jack"; outputPath = r"Square\_Main.xml";
-    inputPath = r"Square\Square.jack"; outputPath = r"Square\_Square.xml";
+    #inputPath = r"Square\Square.jack"; outputPath = r"Square\_Square.xml";
     #inputPath = r"Square\SquareGame.jack"; outputPath = r"Square\_SquareGame.xml"
     #inputPath = r"ExpressionlessSquare\Main.jack"; outputPath = r"ExpressionlessSquare\_Main.xml"
     #inputPath = r"ExpressionlessSquare\Square.jack"; outputPath = r"ExpressionlessSquare\_Square.xml"
@@ -421,3 +430,6 @@ if __name__ == '__main__':
 
     engine = CompilationEngine(inputPath, outputPath)
     engine.CompileClass()
+
+if __name__ == '__main__':
+    main(sys.argv[1:])

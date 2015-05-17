@@ -1,3 +1,6 @@
+import sys
+
+
 class TokenType:
     KEYWORD = 1
     SYMBOL = 2
@@ -204,9 +207,15 @@ class Tokenizer(object):
     def replaceUnsafeXmlSafeChars(self, s):
         return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
-if __name__ == '__main__':
-    path = r"ArrayTest\Main.jack"
-    tokenizer = Tokenizer(path)
+
+def main(args):
+    if len(args) != 1:
+        print "Usage: (python) JackTokenizer.py <inputPath>"
+        return
+
+    inputPath = args[0]
+
+    tokenizer = Tokenizer(inputPath)
     print "<tokens>"
 
     while (tokenizer.hasMoreTokens()):
@@ -234,3 +243,6 @@ if __name__ == '__main__':
             continue
 
     print "</tokens>"
+
+if __name__ == '__main__':
+    main(sys.argv[1:])
