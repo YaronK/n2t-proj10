@@ -202,11 +202,11 @@ class Tokenizer(object):
         return char
 
     def replaceUnsafeXmlSafeChars(self, s):
-        return s.replace('<', '&lt;').replace('>', '&gt;')
+        return s.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
 
 if __name__ == '__main__':
-    path = r"C:\Users\Dana\Google Drive\Masters\Nand2Tetris\projects\10\ArrayTest\Main.jack"
-    tokenizer = JackTokenizer(path)
+    path = r"ArrayTest\Main.jack"
+    tokenizer = Tokenizer(path)
     print "<tokens>"
 
     while (tokenizer.hasMoreTokens()):
@@ -214,7 +214,7 @@ if __name__ == '__main__':
         t = tokenizer.tokenType()
 
         if t is TokenType.KEYWORD:
-            print "<keyword> {} </keyword>".format(tokenizer.keyWord())
+            print "<keyword> {} </keyword>".format(tokenizer.keyword())
             continue
 
         if t is TokenType.SYMBOL:

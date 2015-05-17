@@ -28,6 +28,7 @@ class Keyword:
 class CompilationEngine:
     def __init__(self, inputPath, outputPath):
         self.tokenizer = Tokenizer(inputPath)
+        self.outputFile = open(outputPath, 'w')
         self.tokenizer.advance()
         self.indentLevel = 0
 
@@ -41,18 +42,18 @@ class CompilationEngine:
         self.ConsumeIdentifier()  # className
         self.ConsumeSymbol('{')
 
-        while (self.IsKeyword(Keyword.VAR)):
+        while (self.IsKeyword([Keyword.STATIC, Keyword.FIELD])):
             self.CompileClassVarDec()
 
         # subroutineDec*
-        while (self.IsType(TokenType.KEYWORD) and
-               self.tokenizer.keyword() in [Keyword.CONSTRUCTOR,
-                                            Keyword.FUNCTION, Keyword.METHOD]):
+        while (self.IsKeyword([Keyword.CONSTRUCTOR, Keyword.FUNCTION,
+                               Keyword.METHOD])):
             self.CompileSubroutine()
 
         self.ConsumeSymbol('}')
 
         self.ExitScope("class")
+        self.outputFile.close()
 
     def CompileClassVarDec(self):
         """
@@ -64,7 +65,7 @@ class CompilationEngine:
         self.ConsumeType()
         self.ConsumeIdentifier()  # varName
 
-        while (self.IsSymbol(',')):
+        while (self.IsSymbol([','])):
             self.ConsumeSymbol(',')
             self.ConsumeIdentifier()  # varName
 
@@ -80,7 +81,7 @@ class CompilationEngine:
 
         self.ConsumeKeyword([Keyword.CONSTRUCTOR, Keyword.FUNCTION,
                              Keyword.METHOD])
-        if (self.IsKeyword(Keyword.VOID)):
+        if (self.IsKeyword([Keyword.VOID])):
             self.ConsumeKeyword([Keyword.VOID])
         else:
             self.ConsumeType()
@@ -99,7 +100,7 @@ class CompilationEngine:
         self.EnterScope("subroutineBody")
 
         self.ConsumeSymbol('{')
-        while (self.IsKeyword(Keyword.VAR)):
+        while (self.IsKeyword([Keyword.VAR])):
             self.CompileVarDec()
         self.CompileStatements()
         self.ConsumeSymbol('}')
@@ -113,11 +114,11 @@ class CompilationEngine:
         """
         self.EnterScope("parameterList")
 
-        if (not self.IsSymbol(')')):
+        if (not self.IsSymbol([')'])):
             self.ConsumeType()
             self.ConsumeIdentifier()
 
-        while(self.IsSymbol(',')):
+        while(self.IsSymbol([','])):
             self.ConsumeSymbol(',')
             self.ConsumeType()
             self.ConsumeIdentifier()
@@ -133,7 +134,7 @@ class CompilationEngine:
         self.ConsumeKeyword([Keyword.VAR])
         self.ConsumeType()
         self.ConsumeIdentifier()  # varName
-        while (self.IsSymbol(',')):
+        while (self.IsSymbol([','])):
             self.ConsumeSymbol(',')
             self.ConsumeIdentifier()  # varName
 
@@ -147,6 +148,24 @@ class CompilationEngine:
         enclosing "{}".
         """
         self.EnterScope("statements")
+
+        while self.IsKeyword([Keyword.LET, Keyword.IF, Keyword.WHILE,
+                              Keyword.DO, Keyword.RETURN]):
+            if self.IsKeyword([Keyword.LET]):
+                self.CompileLet()
+
+            if self.IsKeyword([Keyword.IF]):
+                self.CompileIf()
+
+            if self.IsKeyword([Keyword.WHILE]):
+                self.CompileWhile()
+
+            if self.IsKeyword([Keyword.DO]):
+                self.CompileDo()
+
+            if self.IsKeyword([Keyword.RETURN]):
+                self.CompileReturn()
+
         self.ExitScope("statements")
 
     def CompileDo(self):
@@ -154,6 +173,17 @@ class CompilationEngine:
         Compiles a do statement.
         """
         self.EnterScope("doStatement")
+
+        self.ConsumeKeyword([Keyword.DO])
+        self.ConsumeIdentifier()
+        if self.IsSymbol(['.']):
+            self.ConsumeSymbol('.')
+            self.ConsumeIdentifier()
+        self.ConsumeSymbol('(')
+        self.CompileExpressionList()
+        self.ConsumeSymbol(')')
+        self.ConsumeSymbol(';')
+
         self.ExitScope("doStatement")
 
     def CompileLet(self):
@@ -161,6 +191,17 @@ class CompilationEngine:
         Compiles a let statement.
         """
         self.EnterScope("letStatement")
+
+        self.ConsumeKeyword([Keyword.LET])
+        self.ConsumeIdentifier()
+        if self.IsSymbol(['[']):
+            self.ConsumeSymbol('[')
+            self.CompileExpression()
+            self.ConsumeSymbol(']')
+        self.ConsumeSymbol('=')
+        self.CompileExpression()
+        self.ConsumeSymbol(';')
+
         self.ExitScope("letStatement")
 
     def CompileWhile(self):
@@ -168,6 +209,16 @@ class CompilationEngine:
         Compiles a while statement.
         """
         self.EnterScope("whileStatement")
+
+        self.ConsumeKeyword([Keyword.WHILE])
+        self.ConsumeSymbol('(')
+        self.CompileExpression()
+        self.ConsumeSymbol(')')
+
+        self.ConsumeSymbol('{')
+        self.CompileStatements()
+        self.ConsumeSymbol('}')
+
         self.ExitScope("whileStatement")
 
     def CompileReturn(self):
@@ -175,6 +226,12 @@ class CompilationEngine:
         Compiles a return statement.
         """
         self.EnterScope("returnStatement")
+
+        self.ConsumeKeyword([Keyword.RETURN])
+        if not self.IsSymbol([';']):
+            self.CompileExpression()
+        self.ConsumeSymbol(';')
+
         self.ExitScope("returnStatement")
 
     def CompileIf(self):
@@ -183,6 +240,22 @@ class CompilationEngine:
         else clause.
         """
         self.EnterScope("ifStatement")
+
+        self.ConsumeKeyword([Keyword.IF])
+        self.ConsumeSymbol('(')
+        self.CompileExpression()
+        self.ConsumeSymbol(')')
+
+        self.ConsumeSymbol('{')
+        self.CompileStatements()
+        self.ConsumeSymbol('}')
+
+        if self.IsKeyword([Keyword.ELSE]):
+            self.ConsumeKeyword([Keyword.ELSE])
+            self.ConsumeSymbol('{')
+            self.CompileStatements()
+            self.ConsumeSymbol('}')
+
         self.ExitScope("ifStatement")
 
     def CompileExpression(self):
@@ -190,6 +263,13 @@ class CompilationEngine:
         Compiles an expression.
         """
         self.EnterScope("expression")
+
+        op_symbols = ['+', '-', '*', '/', '&amp;', '|', "&lt;", "&gt;", '=']
+        self.CompileTerm()
+        while (self.IsSymbol(op_symbols)):
+            self.ConsumeSymbol(self.tokenizer.symbol())
+            self.CompileTerm()
+
         self.ExitScope("expression")
 
     def CompileTerm(self):
@@ -197,6 +277,45 @@ class CompilationEngine:
         Compiles a term.
         """
         self.EnterScope("term")
+
+        keyword_constants = [Keyword.TRUE, Keyword.FALSE, Keyword.NULL,
+                             Keyword.THIS]
+        unary_symbols = ['-', '~']
+
+        if self.IsType(TokenType.INT_CONST):
+            self.ConsumeIntegerConstant()
+
+        elif self.IsType(TokenType.STRING_CONST):
+            self.ConsumeStringConstant()
+
+        elif self.IsKeyword(keyword_constants):
+                self.ConsumeKeyword(keyword_constants)
+
+        elif self.IsSymbol(['(']):
+            self.ConsumeSymbol('(')
+            self.CompileExpression()
+            self.ConsumeSymbol(')')
+
+        elif self.IsSymbol(unary_symbols):
+            self.ConsumeSymbol(self.tokenizer.symbol())
+            self.CompileTerm()
+        else:
+            self.ConsumeIdentifier()
+            if self.IsSymbol(['[']):    # varName '[' expression ']'
+                self.ConsumeSymbol('[')
+                self.CompileExpression()
+                self.ConsumeSymbol(']')
+            elif self.IsSymbol(['(']):  # subroutineCall
+                self.ConsumeSymbol('(')
+                self.CompileExpressionList()
+                self.ConsumeSymbol(')')
+            elif self.IsSymbol(['.']):
+                self.ConsumeSymbol('.')
+                self.ConsumeIdentifier()
+                self.ConsumeSymbol('(')
+                self.CompileExpressionList()
+                self.ConsumeSymbol(')')
+
         self.ExitScope("term")
 
     def CompileExpressionList(self):
@@ -205,15 +324,23 @@ class CompilationEngine:
         list of expressions.
         """
         self.EnterScope("expressionList")
+
+        if not self.IsSymbol(')'):
+            self.CompileExpression()
+
+        while self.IsSymbol([',']):
+            self.ConsumeSymbol(',')
+            self.CompileExpression()
+
         self.ExitScope("expressionList")
 
-    def IsKeyword(self, keyword):
+    def IsKeyword(self, keyword_list):
         return (self.IsType(TokenType.KEYWORD) and
-                self.tokenizer.keyword() == keyword)
+                self.tokenizer.keyword() in keyword_list)
 
-    def IsSymbol(self, symbol):
+    def IsSymbol(self, symbol_list):
         return (self.IsType(TokenType.SYMBOL) and
-                self.tokenizer.symbol() == symbol)
+                self.tokenizer.symbol() in symbol_list)
 
     def IsType(self, tokenType):
         return self.tokenizer.tokenType() == tokenType
@@ -231,7 +358,8 @@ class CompilationEngine:
             raise Exception("Expected keywords: {}, Actual: {}".
                             format(keywordList, actual))
         self.OutputTag("keyword", actual)
-        self.tokenizer.advance()
+        if self.tokenizer.hasMoreTokens():
+            self.tokenizer.advance()
 
     def ConsumeSymbol(self, symbol):
         self.VerifyTokenType(TokenType.SYMBOL)
@@ -240,22 +368,26 @@ class CompilationEngine:
             raise Exception("Expected symbol: {}, Actual: {}".
                             format(symbol, actual))
         self.OutputTag("symbol", actual)
-        self.tokenizer.advance()
+        if self.tokenizer.hasMoreTokens():
+            self.tokenizer.advance()
 
     def ConsumeIntegerConstant(self):
         self.VerifyTokenType(TokenType.INT_CONST)
         self.OutputTag("integerConstant", self.tokenizer.intVal())
-        self.tokenizer.advance()
+        if self.tokenizer.hasMoreTokens():
+            self.tokenizer.advance()
 
     def ConsumeStringConstant(self):
         self.VerifyTokenType(TokenType.STRING_CONST)
         self.OutputTag("stringConstant", self.tokenizer.stringVal())
-        self.tokenizer.advance()
+        if self.tokenizer.hasMoreTokens():
+            self.tokenizer.advance()
 
     def ConsumeIdentifier(self):
         self.VerifyTokenType(TokenType.IDENTIFIER)
         self.OutputTag("identifier", self.tokenizer.identifier())
-        self.tokenizer.advance()
+        if self.tokenizer.hasMoreTokens():
+            self.tokenizer.advance()
 
     def VerifyTokenType(self, tokenType):
         actual = self.tokenizer.tokenType()
@@ -275,10 +407,17 @@ class CompilationEngine:
         self.Output("<{}> {} </{}>".format(tag, value, tag))
 
     def Output(self, text):
-        print ("\t" * self.indentLevel) + text
+        self.outputFile.write(("  " * self.indentLevel) + text + '\n')
+        # print ("  " * self.indentLevel) + text
 
 if __name__ == '__main__':
-    inputPath = r"C:\Users\Dana\Google Drive\Masters\Nand2Tetris\projects\10\ArrayTest\Main.jack"
+    #inputPath = r"ArrayTest\Main.jack"; outputPath = r"ArrayTest\_Main.xml";
+    #inputPath = r"Square\Main.jack"; outputPath = r"Square\_Main.xml";
+    inputPath = r"Square\Square.jack"; outputPath = r"Square\_Square.xml";
+    #inputPath = r"Square\SquareGame.jack"; outputPath = r"Square\_SquareGame.xml"
+    #inputPath = r"ExpressionlessSquare\Main.jack"; outputPath = r"ExpressionlessSquare\_Main.xml"
+    #inputPath = r"ExpressionlessSquare\Square.jack"; outputPath = r"ExpressionlessSquare\_Square.xml"
+    #inputPath = r"ExpressionlessSquare\SquareGame.jack"; outputPath = r"ExpressionlessSquare\_SquareGame.xml"
 
-    engine = CompilationEngine(inputPath, "")
+    engine = CompilationEngine(inputPath, outputPath)
     engine.CompileClass()
